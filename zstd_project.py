@@ -36,6 +36,8 @@ except ImportError:
 # ─────────────────────────────────────────────
 # Patrones a EXCLUIR siempre
 # ─────────────────────────────────────────────
+SOURCE_DIR = Path.home() / "Source"
+
 BASE_EXCLUDE = {
     "__pycache__",
     ".git",
@@ -237,7 +239,7 @@ def menu():
         print(f"║  Proyecto actual: {here.name:<35}║")
         print("╠══════════════════════════════════════════════════════╣")
         print("║  1  ▶  Comprimir proyecto actual (nivel 9)           ║")
-        print("║  2  ▶  Comprimir Zodiplast-db + Kommo                ║")
+        print("║  2  ▶  Comprimir todos los proyectos → ~/Source      ║")
         print("║  3  ▶  Comprimir carpeta /source COMPLETA            ║")
         print("║  4  ▶  Descomprimir archivo .tar.zst                 ║")
         print("║  5  ▶  Ver contenido de archivo .tar.zst             ║")
@@ -256,30 +258,29 @@ def menu():
             print()
             input("  Presiona Enter para continuar...")
 
-        # ── COMPRIMIR ZODIPLAST-DB + KOMMO ────────────────────
+        # ── COMPRIMIR TODOS LOS PROYECTOS ────────────────────
         elif opcion == "2":
-            source_dir = here.parent
-            proyectos = [here, here.parent / "Kommo"]
-            for proyecto in proyectos:
-                if not proyecto.exists():
-                    print(f"\n  ❌ No encontrado: {proyecto}")
-                    continue
-                destino_default = source_dir / f"{proyecto.name}.tar.zst"
-                entrada = input(f"\n  Destino para {proyecto.name} [{destino_default}]: ").strip()
-                output = entrada if entrada else str(destino_default)
-                compress(str(proyecto), output, level=9)
+            proyectos = sorted([
+                p for p in SOURCE_DIR.iterdir()
+                if p.is_dir() and not p.name.startswith(".")
+            ])
+            if not proyectos:
+                print(f"\n  ❌ No se encontraron proyectos en {SOURCE_DIR}")
+            else:
+                print(f"\n  Comprimirá {len(proyectos)} proyectos → {SOURCE_DIR}")
+                print(f"  " + "─" * 53)
+                for proyecto in proyectos:
+                    output = str(SOURCE_DIR / f"{proyecto.name}.tar.zst")
+                    compress(str(proyecto), output, level=9)
             print()
             input("  Presiona Enter para continuar...")
 
         # ── COMPRIMIR /source COMPLETA ────────────────────────
         elif opcion == "3":
-            source_dir = here.parent  # .../source/
-            destino_default = source_dir.parent / f"{source_dir.name}.tar.zst"
-            print(f"\n  Comprimirá TODA la carpeta: {source_dir}")
-            print(f"  Incluye: .env, tokens, bases de datos, reportes, todo.")
-            entrada = input(f"  Destino [{destino_default}]: ").strip()
-            output = entrada if entrada else str(destino_default)
-            compress(str(source_dir), output, level=9)
+            output = str(SOURCE_DIR / "Source.tar.zst")
+            print(f"\n  Comprimirá TODA la carpeta: {SOURCE_DIR}")
+            print(f"  Destino: {output}")
+            compress(str(SOURCE_DIR), output, level=9)
             print()
             input("  Presiona Enter para continuar...")
 
