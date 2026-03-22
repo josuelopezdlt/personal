@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 chcp 65001 >nul
+set SCRIPT_DIR=%~dp0
 echo.
 echo ══════════════════════════════════════════════
 echo    Instalador — zstd_project  (setup inicial)
@@ -53,15 +54,16 @@ echo [OK] Dependencias instaladas en .venv
 :: ── 4. Registrar doskey / acceso directo ──────
 echo.
 echo   Registrando acceso en variables de usuario...
-setx ZSTD_PROJECT_DIR "%~dp0" >nul 2>&1
-echo [OK] Variable ZSTD_PROJECT_DIR registrada.
+setx PERSONAL_STARTER_DIR "%SCRIPT_DIR%" >nul 2>&1
+echo [OK] Variable PERSONAL_STARTER_DIR registrada.
 
 echo.
 echo ══════════════════════════════════════════════
 echo    Listo. Formas de arrancar:
 echo.
 echo    init.bat               → menú interactivo
-echo    .venv\Scripts\python zstd_project.py
+echo    .venv\Scripts\python personal_starter.py
+echo    .venv\Scripts\python personal_starter.py zstd --help
 echo ══════════════════════════════════════════════
 echo.
 pause

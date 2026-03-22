@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # init.sh — Punto de entrada principal (macOS/Linux)
-# Activa el entorno virtual e inicia zstd_project.
-# Ejecutar:  ./init.sh [argumentos para zstd_project.py]
+# Activa el entorno virtual e inicia personal_starter.
+# Ejecutar:  ./init.sh [argumentos para personal_starter.py]
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,4 +17,4 @@ if [[ ! -f "$VENV_PYTHON" ]]; then
 fi
 
 # ── Lanzar la herramienta ─────────────────────
-exec "$VENV_PYTHON" "$SCRIPT_DIR/zstd_project.py" "$@"
+exec "$VENV_PYTHON" "$SCRIPT_DIR/personal_starter.py" "$@"

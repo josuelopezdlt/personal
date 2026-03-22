@@ -1,80 +1,125 @@
-# personal — setup inicial
+# personal — starter toolkit
 
-Herramientas personales de desarrollo. Funciona como **setup inicial** y punto de entrada (`/init`) en cualquier máquina nueva.
+Este repositorio ahora es un **punto de partida** para nuevos proyectos:
 
----
+1. Mantiene la herramienta de compresión/descompresión con zstd.
+2. Crea entornos virtuales e instala `requirements` de otros proyectos.
+3. Ayuda a inicializar SSH.
+4. Valida tokens por variables de entorno.
+5. Genera/ejecuta túneles SSH para conectar DBCode a bases remotas.
 
 ## Estructura
 
 ```
 personal/
-├── zstd_project.py      # Herramienta de compresión/backup (menú + CLI)
-├── install.sh           # Setup inicial — macOS / Linux
-├── install.bat          # Setup inicial — Windows
-├── init.sh              # Arranque rápido — macOS / Linux
-├── init.bat             # Arranque rápido — Windows
-└── requirements.txt     # Dependencias Python
+├── personal_starter.py  # Menú + CLI principal (starter toolkit)
+├── zstd_project.py      # Utilidad zstd (menú + CLI)
+├── install.sh           # Instalación inicial (macOS/Linux)
+├── install.bat          # Instalación inicial (Windows)
+├── init.sh              # Entrypoint rápido (macOS/Linux)
+├── init.bat             # Entrypoint rápido (Windows)
+└── requirements.txt     # Dependencias Python del toolkit
 ```
-
----
 
 ## Instalación (primera vez)
 
 ### macOS / Linux
+
 ```bash
 bash install.sh
 ```
+
 El instalador:
-1. Verifica Python 3
-2. Crea un entorno virtual en `.venv`
-3. Instala dependencias (`zstandard`)
-4. Registra el alias `zstd` en `.zshrc` / `.bashrc`
+
+1. Verifica Python 3.
+2. Crea `.venv` local.
+3. Instala dependencias.
+4. Registra alias:
+	- `personal` -> CLI principal.
+	- `zstd` -> acceso rápido a `personal zstd`.
 
 ### Windows
+
 ```bat
 install.bat
 ```
 
----
-
 ## Uso diario
 
 ### Menú interactivo
+
 ```bash
-./init.sh          # macOS / Linux
-init.bat           # Windows
-```
-O con el alias registrado:
-```bash
-zstd
+./init.sh            # macOS/Linux
+init.bat             # Windows
 ```
 
-### CLI directo
+O directo:
+
 ```bash
-./init.sh compress  <ruta>              # Comprimir directorio
-./init.sh compress  <ruta> --level 9   # Nivel de compresión 1-22
-./init.sh decompress <archivo.tar.zst> --output <destino>
-./init.sh list       <archivo.tar.zst> --verbose
+personal
 ```
 
----
+### Comandos CLI del starter
 
-## Configuración
-
-| Variable de entorno  | Descripción                                    | Default                    |
-|----------------------|------------------------------------------------|----------------------------|
-| `ZSTD_SOURCE_DIR`    | Directorio raíz de proyectos para backup masivo | `~/Documents/source`       |
-
-Ejemplo:
 ```bash
-export ZSTD_SOURCE_DIR=~/Projects
-./init.sh
+# Validar herramientas base del sistema
+personal doctor
+
+# Crear venv e instalar requirements de otro proyecto
+personal setup-project ~/code/mi-proyecto
+
+# Misma operación indicando requirements manualmente
+personal setup-project ~/code/mi-proyecto -r ~/code/mi-proyecto/requirements.txt
+
+# Instalar llave SSH exclusivamente desde 1Password
+personal ssh-init --vault Engineering --item github-ssh
+
+# Validar tokens por variables de entorno
+personal token-check --token GITHUB_TOKEN --token DBCODE_TOKEN
+
+# Generar comando de túnel DBCode
+personal dbcode-tunnel --user ubuntu --host bastion.miempresa.com --remote-port 5432
+
+# Abrir el túnel en primer plano
+personal dbcode-tunnel --user ubuntu --host bastion.miempresa.com --remote-port 5432 --execute
 ```
 
-También puedes cambiar el directorio en tiempo de ejecución con la **opción 6** del menú interactivo.
+Antes de cualquier comando SSH, inicia sesion en 1Password CLI:
 
----
+```bash
+op signin
+```
 
-## Credenciales y secretos
+## zstd (compatible)
 
-Cualquier token o clave SSH que este proyecto pueda necesitar en el futuro **debe obtenerse exclusivamente desde [1Password](https://1password.com)**, nunca desde archivos locales (`.env`, `~/.ssh`, etc.).
+Sigue disponible sin romper el flujo anterior:
+
+```bash
+personal zstd
+personal zstd compress <ruta> --level 9
+personal zstd decompress <archivo.tar.zst> --output <destino>
+personal zstd list <archivo.tar.zst> --verbose
+```
+
+## Flujo sugerido para nuevos proyectos
+
+1. Ejecuta `personal doctor` para validar base local.
+2. Crea entorno en el proyecto destino con `personal setup-project`.
+3. Instala SSH desde 1Password con `personal ssh-init --vault <vault> --item <item>`.
+4. Exporta tokens de forma temporal en sesión (nunca hardcode).
+5. Usa `personal dbcode-tunnel` para conectar DBCode vía `localhost`.
+
+## Variables de entorno
+
+| Variable | Uso |
+|---|---|
+| `ZSTD_SOURCE_DIR` | Directorio raíz para operaciones masivas de zstd. |
+| `GITHUB_TOKEN` | Token para integraciones con GitHub (si aplica). |
+| `DBCODE_TOKEN` | Token para flujos de DBCode (si aplica). |
+
+## Seguridad
+
+1. No guardes tokens en repositorio.
+2. No comitees llaves privadas SSH.
+3. SSH se obtiene solo desde 1Password (sin generar llaves locales fuera del vault).
+4. Cierra túneles SSH cuando termines.

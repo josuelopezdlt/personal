@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install.sh — macOS/Linux
-# Configura el entorno completo y registra el alias 'zstd' en el shell.
+# Configura el entorno completo y registra los alias de arranque en el shell.
 set -e
 
 echo ""
@@ -70,17 +70,19 @@ else
     SHELL_RC="$HOME/.bashrc"
 fi
 
-ALIAS_LINE="alias zstd='$VENV_DIR/bin/python $SCRIPT_DIR/zstd_project.py'"
+ALIAS_LINE="alias personal='$VENV_DIR/bin/python $SCRIPT_DIR/personal_starter.py'"
+ZSTD_ALIAS_LINE="alias zstd='personal zstd'"
 if ! grep -qF "$ALIAS_LINE" "$SHELL_RC" 2>/dev/null; then
     {
         echo ""
-        echo "# zstd_project — setup inicial"
+        echo "# personal starter — setup inicial"
         echo "$ALIAS_LINE"
+        echo "$ZSTD_ALIAS_LINE"
     } >> "$SHELL_RC"
-    echo "[OK] Alias 'zstd' registrado en $SHELL_RC"
+    echo "[OK] Alias 'personal' y 'zstd' registrados en $SHELL_RC"
     echo "     Recarga con: source $SHELL_RC"
 else
-    echo "[OK] Alias 'zstd' ya estaba registrado en $SHELL_RC"
+    echo "[OK] Alias 'personal' ya estaba registrado en $SHELL_RC"
 fi
 
 # ── 5. Generar init.sh ejecutable ─────────────
@@ -93,6 +95,7 @@ echo "   Listo. Formas de arrancar:"
 echo ""
 echo "   ./init.sh              → menú interactivo"
 echo "   source $SHELL_RC"
-echo "   zstd                   → alias global"
+echo "   personal               → alias global"
+echo "   zstd                   → acceso rápido a herramientas zstd"
 echo "══════════════════════════════════════════════"
 echo ""
