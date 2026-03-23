@@ -33,6 +33,12 @@ Thumbs.db
 *.swo
 *~
 
+# ── Node ─────────────────────────────────────
+node_modules/
+.next/
+out/
+npm-debug.log*
+
 # ── Salida del proyecto ──────────────────────
 output/
 *.tar.zst

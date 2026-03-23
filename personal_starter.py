@@ -320,6 +320,62 @@ def command_dbcode_tunnel(
     return _run(cmd, check=False)
 
 
+def command_setup_claude_key(
+    vault: str = "Data Analytics",
+    item: str = "Claude",
+    field: str = "credencial",
+) -> int:
+    _print_header("Configurar API Key de Claude")
+
+    if not _require_1password_session():
+        return 1
+
+    op_executable = _resolve_op_executable()
+    reference = f"op://{vault}/{item}/{field}"
+    print(f"Leyendo key desde 1Password: {reference}")
+
+    result = subprocess.run(
+        [op_executable, "read", "--no-newline", reference],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        print(f"[ERROR] No se pudo leer el campo desde 1Password.")
+        if result.stderr:
+            print(result.stderr.strip())
+        return 1
+
+    api_key = result.stdout.strip()
+
+    if os.name == "nt":
+        completed = subprocess.run(
+            ["setx", "ANTHROPIC_API_KEY", api_key],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            print("[ERROR] No se pudo setear la variable con setx.")
+            print(completed.stderr.strip())
+            return 1
+        print("ANTHROPIC_API_KEY seteada como variable de entorno de usuario.")
+        print("Reinicia VS Code para que tome el nuevo valor.")
+    else:
+        profile_file = Path.home() / ".zshrc"
+        if not profile_file.exists():
+            profile_file = Path.home() / ".bashrc"
+        marker = "# ANTHROPIC_API_KEY (personal-starter)"
+        content = profile_file.read_text(encoding="utf-8") if profile_file.exists() else ""
+        lines = [l for l in content.splitlines() if marker not in l and "ANTHROPIC_API_KEY" not in l]
+        lines.append(f'{marker}\nexport ANTHROPIC_API_KEY="{api_key}"')
+        profile_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print(f"ANTHROPIC_API_KEY escrita en {profile_file}")
+        print(f"Ejecuta 'source {profile_file}' o reinicia la terminal.")
+
+    return 0
+
+
 def command_zstd_passthrough(args: list[str]) -> int:
     if not ZSTD_SCRIPT.exists():
         print(f"[ERROR] No se encontro {ZSTD_SCRIPT}")
@@ -339,6 +395,7 @@ def menu() -> int:
         print("║  4  ▶  Instalar llave SSH desde 1Password            ║")
         print("║  5  ▶  Generar comando de tunnel DBCode              ║")
         print("║  6  ▶  Doctor (python/git/ssh/code)                 ║")
+        print("║  7  ▶  Configurar API Key de Claude (1Password)      ║")
         print("║  0  ▶  Salir                                         ║")
         print("╚══════════════════════════════════════════════════════╝")
 
@@ -395,6 +452,8 @@ def menu() -> int:
             )
         elif option == "6":
             command_doctor()
+        elif option == "7":
+            command_setup_claude_key()
         elif option == "0":
             return 0
         else:
@@ -435,6 +494,11 @@ def build_parser() -> argparse.ArgumentParser:
     tunnel.add_argument("--remote-port", type=int, required=True, help="Puerto remoto de base de datos")
     tunnel.add_argument("--identity-file", default=None, help="Llave privada SSH opcional")
     tunnel.add_argument("--execute", action="store_true", help="Ejecutar tunnel en primer plano")
+
+    claude_key = sub.add_parser("setup-claude-key", help="Leer API Key de Claude desde 1Password y setearla como variable de entorno")
+    claude_key.add_argument("--vault", default="Data Analytics", help="Vault de 1Password (default: Data Analytics)")
+    claude_key.add_argument("--item", default="Claude", help="Item de 1Password (default: Claude)")
+    claude_key.add_argument("--field", default="credencial", help="Campo del item (default: credencial)")
 
     zstd = sub.add_parser("zstd", help="Passthrough a zstd_project.py")
     zstd.add_argument("zstd_args", nargs=argparse.REMAINDER, help="Argumentos para zstd_project.py")
@@ -483,6 +547,9 @@ def main() -> int:
             identity_file=args.identity_file,
             execute=args.execute,
         )
+
+    if args.command == "setup-claude-key":
+        return command_setup_claude_key(vault=args.vault, item=args.item, field=args.field)
 
     if args.command == "zstd":
         return command_zstd_passthrough(args.zstd_args)
