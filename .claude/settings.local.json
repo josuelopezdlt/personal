@@ -5,7 +5,6 @@
       "Bash(python zstd_project.py decompress \"../Source.tar.zst\" --output \"../test_decompress_tmp\")",
       "Bash(op vault:*)",
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\(''''name'''',''''''''\\)\\)\")",
-      "Bash(python personal_starter.py setup-claude-key)",
       "Bash(op whoami:*)"
     ]
   }
