@@ -1,11 +1,8 @@
 """
-claude_quota.py
-===============
-Tracker para la cuota de uso de Claude.
+utils/claude_quota.py — Tracker de cuota de uso de Claude.
 
 Registra cuando se reinicia la cuota y muestra el tiempo restante
-con una barra de progreso visual. Permite sincronización manual
-con los avisos de la interfaz web de Claude.
+con una barra de progreso visual. Permite sincronización manual.
 
 Estado persistido en ~/.config/toolkit/claude_quota.json
 """
@@ -39,10 +36,7 @@ def _load_state() -> dict:
 
 def _save_state(state: dict) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(
-        json.dumps(state, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def _now() -> datetime:
@@ -67,7 +61,6 @@ def _format_duration(td: timedelta) -> str:
 
 
 def _progress_bar(fraction: float) -> str:
-    # Asegurarse de que la fracción esté entre 0 y 1
     fraction = max(0.0, min(1.0, fraction))
     filled = int(BAR_WIDTH * fraction)
     empty = BAR_WIDTH - filled
@@ -75,11 +68,10 @@ def _progress_bar(fraction: float) -> str:
 
 
 def cmd_reset(args: argparse.Namespace) -> int:
-    """Marca el inicio de una ventana de cuota o sincroniza con la hora de Claude."""
+    """Marca el inicio de una ventana de cuota o sincroniza con Claude."""
     state = _load_state()
     now = _now()
     
-    # Calcular expiración basada en argumentos
     if args.hours:
         window = timedelta(hours=args.hours)
     elif args.minutes:
@@ -89,13 +81,9 @@ def cmd_reset(args: argparse.Namespace) -> int:
 
     expires_at = now + window
 
-    # Guardar en historial
     history: list[dict] = state.get("history", [])
     if "reset_at" in state and "expires_at" in state:
-        history.append({
-            "reset_at": state["reset_at"],
-            "expires_at": state["expires_at"]
-        })
+        history.append({"reset_at": state["reset_at"], "expires_at": state["expires_at"]})
         history = history[-20:]
 
     state["reset_at"] = now.isoformat()
@@ -157,7 +145,6 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print(f"  [{_progress_bar(fraction_remaining)}]")
     print()
 
-    # Alerta si queda poco
     if remaining < timedelta(minutes=30):
         print("  \u26a0\ufe0f  ¡Menos de 30 minutos para el reset!")
         print()
@@ -168,18 +155,45 @@ def cmd_status(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_history(_args: argparse.Namespace) -> int:
+    """Muestra el historial de resets."""
+    state = _load_state()
+    history: list[dict] = state.get("history", [])
+
+    current = state.get("reset_at")
+    if not current and not history:
+        print()
+        print("  Sin historial registrado.")
+        print()
+        return 0
+
+    print()
+    print("  \U0001f4cb Historial de cuotas")
+    print("  " + "\u2500" * 44)
+
+    if current:
+        reset_at = _parse_ts(current)
+        local_t = reset_at.astimezone()
+        print(f"  \u25b6 {local_t:%Y-%m-%d %H:%M}  (actual)")
+
+    for entry in reversed(history[-10:]):
+        t = _parse_ts(entry["reset_at"]).astimezone()
+        print(f"    {t:%Y-%m-%d %H:%M}")
+
+    print()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Tracker de cuota de uso de Claude (manual y sincronizable)",
-    )
+    parser = argparse.ArgumentParser(description="Tracker de cuota de uso de Claude (5h)")
     sub = parser.add_subparsers(dest="action")
 
-    sub.add_parser("status", help="Mostrar tiempo restante (por defecto)")
+    sub.add_parser("status", help="Mostrar tiempo restante (default)")
     
-    reset_parser = sub.add_parser("reset", help="Iniciar contador o sincronizar expiración")
+    reset_parser = sub.add_parser("reset", help="Iniciar contador")
     group = reset_parser.add_mutually_exclusive_group()
-    group.add_argument("--hours", type=float, help="Horas exactas hasta el reset (ej: 2.5)")
-    group.add_argument("--minutes", type=int, help="Minutos exactos hasta el reset (ej: 90)")
+    group.add_argument("--hours", type=float, help="Horas hasta el reset (ej: 2.5)")
+    group.add_argument("--minutes", type=int, help="Minutos hasta el reset (ej: 90)")
     
     sub.add_parser("history", help="Ver historial de resets")
 
@@ -195,9 +209,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == "reset":
         return cmd_reset(args)
     if args.action == "history":
-        # Se omitió cmd_history por brevedad, pero funciona igual que tu versión original.
-        print("\n  [Historial disponible en la versión completa]\n")
-        return 0
+        return cmd_history(args)
 
     parser.print_help()
     return 1

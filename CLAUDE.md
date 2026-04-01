@@ -1,45 +1,57 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
+Guía para trabajar con el proyecto `toolkit`.
 
 ## Project Overview
 
-Toolkit de utilidades pequenas y autocontenidas. Este repo guarda mini proyectos standalone que no pertenecen a un dominio de negocio. El setup del entorno (venvs, SSH, tokens, túneles) vive en `infra`.
+Mini-repositorio de utilidades autocontenidas. Cada utilidad vive en `utils/` y se expone como comando en la CLI via `toolkit.py`. 
+
+El setup del entorno, secretos, bootstrap de máquina y tareas operativas compartidas viven en `infra`.
 
 ## Setup & Running
 
 ```bash
-# Mac/Linux — crea .venv si no existe, activa y ejecuta
-bash run.sh
+# Setup automático (crea venv + instala deps + ejecuta)
+bash run.sh      # macOS/Linux
+run.bat          # Windows
 
-# Windows
-run.bat
-
-# O directamente con el venv activo
+# O directamente
 python toolkit.py [comando]
 ```
 
 ## Available Commands
 
 ```bash
-python toolkit.py zstd compress <path> [--level 9] [--output file.tar.zst]
-python toolkit.py zstd decompress <file.tar.zst> --output <destino>
-python toolkit.py zstd list <file.tar.zst> [--verbose]
+# ZSTD — Compresión
+python toolkit.py zstd compress <ruta> [--level 9]
+python toolkit.py zstd decompress <archivo.tar.zst> --output <destino>
+python toolkit.py zstd list <archivo.tar.zst> [--verbose]
+
+# Claude Quota Tracker
+python toolkit.py claude status
+python toolkit.py claude reset [--hours 2.5 | --minutes 90]
+python toolkit.py claude history
 ```
 
 ## Architecture
 
-**Two modules:**
+**Modules in `utils/`:**
 
-- `toolkit.py` — CLI principal. Expone utilidades pequeñas y el menú interactivo cuando se invoca sin argumentos.
-- `zstd_project.py` — Utilidad de compresión standalone. Invocada vía passthrough desde `toolkit.py zstd` o directamente. Configurable con `ZSTD_SOURCE_DIR`.
+- `utils/zstd.py` — Compresión de proyectos completos con Zstandard
+- `utils/claude_quota.py` — Tracker de cuota de uso (ventana 5h)
+
+**Entry points:**
+
+- `toolkit.py` — CLI unifyer con menú interactivo
+- `scripts/bootstrap.py` — Setup multiplataforma (crea venv, instala, ejecuta)
+- `run.sh` / `run.bat` — Wrappers simplificados
 
 ## Dependencies
 
-**Python**: `zstandard`
+- `zstandard` — comprensión zstd
 
 ## Environment Variables
 
 | Variable | Purpose |
 |---|---|
-| `ZSTD_SOURCE_DIR` | Directorio raíz para operaciones masivas de zstd |
+| `ZSTD_SOURCE_DIR` | Root dir para operaciones masivas zstd (default: `~/Documents/source`) |
