@@ -3,6 +3,7 @@ utils/zstd.py — Compresión de proyectos con Zstandard.
 """
 
 import argparse
+import datetime
 import os
 import tarfile
 import sys
@@ -47,10 +48,15 @@ def human_size(num_bytes: int) -> str:
     return f"{num_bytes:.1f} TB"
 
 
+def default_output_name(source: Path) -> str:
+    date = datetime.date.today().strftime("%Y%m%d")
+    return str(source / f"Source_Completo_{date}.tar.zst")
+
+
 def resolve_output(source: Path, output_arg: str) -> str:
     if output_arg:
         return output_arg if output_arg.endswith(".tar.zst") else output_arg + ".tar.zst"
-    return str(source.parent / f"{source.name}.tar.zst")
+    return default_output_name(source)
 
 
 def find_zst_files(search_dir: Path) -> list[Path]:
@@ -121,6 +127,9 @@ def decompress(input_file: str, output_dir: str):
     if not input_path.exists():
         print(f"\n  ❌ No existe: {input_path}")
         return
+    if not input_path.is_file():
+        print(f"\n  ❌ No es un archivo: {input_path}")
+        return
 
     output = Path(output_dir).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -158,6 +167,9 @@ def list_contents(input_file: str, verbose: bool = False):
     if not input_path.exists():
         print(f"\n  ❌ No existe: {input_path}")
         return
+    if not input_path.is_file():
+        print(f"\n  ❌ No es un archivo: {input_path}")
+        return
 
     print()
     print(f"  📋 Contenido de: {input_path.name}")
@@ -165,8 +177,8 @@ def list_contents(input_file: str, verbose: bool = False):
 
     dctx = zstd.ZstdDecompressor()
     total_files = 0
-    total_dirs = 0
     total_bytes = 0
+    top_folders: dict[str, int] = {}  # folder -> file count
 
     with open(input_path, "rb") as f_in:
         with dctx.stream_reader(f_in) as decompressor:
@@ -175,12 +187,16 @@ def list_contents(input_file: str, verbose: bool = False):
                     if member.isfile():
                         total_files += 1
                         total_bytes += member.size
-                        if verbose:
-                            print(f"  {human_size(member.size):>10}  {member.name}")
-                    elif member.isdir():
-                        total_dirs += 1
+                        parts = Path(member.name).parts
+                        folder = parts[1] if len(parts) > 1 else "(raíz)"
+                        top_folders[folder] = top_folders.get(folder, 0) + 1
 
-    print(f"\n     Directorios: {total_dirs}")
+    print()
+    for folder, count in sorted(top_folders.items()):
+        print(f"  📁  {folder:<30} {count:>5} archivos")
+
+    print()
+    print(f"     Carpetas:    {len(top_folders)}")
     print(f"     Archivos:    {total_files}")
     print(f"     Tamaño orig: {human_size(total_bytes)}")
     print(f"     Comprimido:  {human_size(input_path.stat().st_size)}")
@@ -219,6 +235,27 @@ def cli(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _pick_zst_from_source() -> str | None:
+    files = sorted(SOURCE_DIR.glob("*.tar.zst"))
+    if not files:
+        print(f"\n  ❌ No hay archivos .tar.zst en {SOURCE_DIR}")
+        return None
+    print()
+    for i, f in enumerate(files, 1):
+        size = human_size(f.stat().st_size)
+        print(f"  {i}  {f.name}  ({size})")
+    print()
+    raw = input("  Selecciona un archivo: ").strip()
+    try:
+        idx = int(raw) - 1
+        if 0 <= idx < len(files):
+            return str(files[idx])
+    except ValueError:
+        pass
+    print("  [ERROR] Selección inválida.")
+    return None
+
+
 def menu() -> int:
     while True:
         print()
@@ -234,9 +271,8 @@ def menu() -> int:
         option = input("\n  Opción: ").strip()
 
         if option == "1":
-            source = input("  Ruta del proyecto: ").strip()
+            output = default_output_name(SOURCE_DIR)
             level_raw = input("  Nivel [1-22] (default 9): ").strip()
-            output = input("  Salida (.tar.zst, opcional): ").strip()
             level = 9
             if level_raw:
                 try:
@@ -244,18 +280,15 @@ def menu() -> int:
                 except ValueError:
                     print("  [ERROR] Nivel inválido, usando 9.")
                     level = 9
-            cli(["compress", source, "--level", str(level)] + (["--output", output] if output else []))
+            cli(["compress", str(SOURCE_DIR), "--level", str(level), "--output", output])
         elif option == "2":
-            input_file = input("  Archivo .tar.zst: ").strip()
-            output = input("  Carpeta destino (default .): ").strip() or "."
-            cli(["decompress", input_file, "--output", output])
+            input_file = _pick_zst_from_source()
+            if input_file:
+                cli(["decompress", input_file, "--output", str(SOURCE_DIR)])
         elif option == "3":
-            input_file = input("  Archivo .tar.zst: ").strip()
-            verbose = input("  Verbose? [y/N]: ").strip().lower() in {"y", "yes", "s", "si"}
-            args = ["list", input_file]
-            if verbose:
-                args.append("--verbose")
-            cli(args)
+            input_file = _pick_zst_from_source()
+            if input_file:
+                cli(["list", input_file])
         elif option == "0":
             return 0
         else:
