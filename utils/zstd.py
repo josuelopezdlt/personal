@@ -186,7 +186,7 @@ def list_contents(input_file: str, verbose: bool = False):
     print(f"     Comprimido:  {human_size(input_path.stat().st_size)}")
 
 
-if __name__ == "__main__":
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Comprime/descomprime proyectos con Zstandard")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -203,7 +203,12 @@ if __name__ == "__main__":
     ls.add_argument("input", help="Archivo .tar.zst a inspeccionar")
     ls.add_argument("--verbose", "-v", action="store_true", help="Mostrar cada archivo")
 
-    args = parser.parse_args()
+    return parser
+
+
+def cli(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
 
     if args.command == "compress":
         compress(args.source, args.output, level=args.level)
@@ -211,3 +216,51 @@ if __name__ == "__main__":
         decompress(args.input, args.output)
     elif args.command == "list":
         list_contents(args.input, verbose=args.verbose)
+    return 0
+
+
+def menu() -> int:
+    while True:
+        print()
+        print("╔══════════════════════════════════════════════╗")
+        print("║            ZSTD — UTILIDAD CLI              ║")
+        print("╠══════════════════════════════════════════════╣")
+        print("║  1  ▶  Comprimir                            ║")
+        print("║  2  ▶  Descomprimir                         ║")
+        print("║  3  ▶  Listar contenido                     ║")
+        print("║  0  ▶  Volver                               ║")
+        print("╚══════════════════════════════════════════════╝")
+
+        option = input("\n  Opción: ").strip()
+
+        if option == "1":
+            source = input("  Ruta del proyecto: ").strip()
+            level_raw = input("  Nivel [1-22] (default 9): ").strip()
+            output = input("  Salida (.tar.zst, opcional): ").strip()
+            level = 9
+            if level_raw:
+                try:
+                    level = int(level_raw)
+                except ValueError:
+                    print("  [ERROR] Nivel inválido, usando 9.")
+                    level = 9
+            cli(["compress", source, "--level", str(level)] + (["--output", output] if output else []))
+        elif option == "2":
+            input_file = input("  Archivo .tar.zst: ").strip()
+            output = input("  Carpeta destino (default .): ").strip() or "."
+            cli(["decompress", input_file, "--output", output])
+        elif option == "3":
+            input_file = input("  Archivo .tar.zst: ").strip()
+            verbose = input("  Verbose? [y/N]: ").strip().lower() in {"y", "yes", "s", "si"}
+            args = ["list", input_file]
+            if verbose:
+                args.append("--verbose")
+            cli(args)
+        elif option == "0":
+            return 0
+        else:
+            print("  [ERROR] Opción no válida.")
+
+
+if __name__ == "__main__":
+    raise SystemExit(cli())
